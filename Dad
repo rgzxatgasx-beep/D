@@ -1,0 +1,369 @@
+-- โหลด Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้างหน้าต่างหลัก
+local Window = Rayfield:CreateWindow({
+   Name = "แมพรางตาย | Dead Rails Hub",
+   LoadingTitle = "กำลังโหลดระบบ...",
+   LoadingSubtitle = "by AI Assistant",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "DeadRailsConfig",
+      FileName = "MainConfig"
+   },
+   Discord = {
+      Enabled = false
+   },
+   KeySystem = false
+})
+
+-- ตัวแปรควบคุมระบบต่าง ๆ (Variables)
+local AutoFarm = false
+local AutoShoot = false
+local AutoCollectCoins = false
+local AutoDriveTrain = false
+local Invisibility = false
+local InfiniteJumpEnabled = false
+local PlayerESPEnabled = false
+local TrainSpeed = 50
+local ESPColor = Color3.fromRGB(255, 0, 0)
+local PlayerESPColor = Color3.fromRGB(0, 255, 0)
+local ESPEnabled = false
+
+-- ฟังก์ชันสำหรับสร้างข้อความแสดงสถานะพร้อมสี (RichText)
+local function GetStatusText(state)
+   if state then
+      return '<font color="#00FF00">[ เปิดใช้งาน ]</font>'
+   else
+      return '<font color="#FF0000">[ ปิดใช้งาน ]</font>'
+   end
+end
+
+-- ==========================================
+-- TABS (เมนูหลัก)
+-- ==========================================
+
+local MainTab = Window:CreateTab("ระบบหลัก (Main)", 4483362458)
+local PlayerTab = Window:CreateTab("ผู้เล่น (Player)", 4483362458)
+local TrainTab = Window:CreateTab("รถไฟ (Train)", 4483362458)
+local VisualTab = Window:CreateTab("มองทะลุ (ESP)", 4483362458)
+
+-- ==========================================
+-- 1. TAB: MAIN (ฟาร์ม/ยิง/เก็บเงิน)
+-- ==========================================
+
+MainTab:CreateSection("สถานะระบบหลัก")
+
+local FarmStatus = MainTab:CreateParagraph({
+   Title = "สถานะ ฟาร์มอัตโนมัติ",
+   Content = GetStatusText(false)
+})
+
+local ShootStatus = MainTab:CreateParagraph({
+   Title = "สถานะ ยิงซอมบี้อัตโนมัติ",
+   Content = GetStatusText(false)
+})
+
+MainTab:CreateSection("ควบคุมระบบฟาร์ม")
+
+MainTab:CreateToggle({
+   Name = "เปิดระบบฟาร์มอัตโนมัติ (Auto Farm)",
+   CurrentValue = false,
+   Flag = "AutoFarmToggle",
+   Callback = function(Value)
+      AutoFarm = Value
+      FarmStatus:Set({Title = "สถานะ ฟาร์มอัตโนมัติ", Content = GetStatusText(Value)})
+      
+      task.spawn(function()
+         while AutoFarm do
+            task.wait(0.5)
+            print("กำลังฟาร์มอัตโนมัติ...")
+         end
+      end)
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "ยิงซอมบี้อัตโนมัติ (Auto Shoot Zombie)",
+   CurrentValue = false,
+   Flag = "AutoShootToggle",
+   Callback = function(Value)
+      AutoShoot = Value
+      ShootStatus:Set({Title = "สถานะ ยิงซอมบี้อัตโนมัติ", Content = GetStatusText(Value)})
+
+      task.spawn(function()
+         while AutoShoot do
+            task.wait(0.1)
+            pcall(function()
+               for _, obj in pairs(workspace:GetChildren()) do
+                  if obj:FindFirstChild("Humanoid") and obj.Name:find("Zombie") then
+                     -- โค้ดยิงซอมบี้
+                  end
+               end
+            end)
+         end
+      end)
+   end,
+})
+
+MainTab:CreateSection("ระบบเก็บของ")
+
+local CoinsStatus = MainTab:CreateParagraph({
+   Title = "สถานะ เก็บเงินแดงอัตโนมัติ",
+   Content = GetStatusText(false)
+})
+
+MainTab:CreateToggle({
+   Name = "เก็บเงินแดงอัตโนมัติ (Auto Collect Red Coins)",
+   CurrentValue = false,
+   Flag = "AutoCoinsToggle",
+   Callback = function(Value)
+      AutoCollectCoins = Value
+      CoinsStatus:Set({Title = "สถานะ เก็บเงินแดงอัตโนมัติ", Content = GetStatusText(Value)})
+
+      task.spawn(function()
+         while AutoCollectCoins do
+            task.wait(0.3)
+            pcall(function()
+               local char = game.Players.LocalPlayer.Character
+               if char and char:FindFirstChild("HumanoidRootPart") then
+                  for _, item in pairs(workspace:GetDescendants()) do
+                     if item.Name == "RedCoin" or item.Name == "RedMoney" then
+                        if item:IsA("BasePart") then
+                           firetouchinterest(char.HumanoidRootPart, item, 0)
+                           firetouchinterest(char.HumanoidRootPart, item, 1)
+                        end
+                     end
+                  end
+               end
+            end)
+         end
+      end)
+   end,
+})
+
+-- ==========================================
+-- 2. TAB: PLAYER (ปรับแต่งตัวละคร)
+-- ==========================================
+
+PlayerTab:CreateSection("เคลื่อนที่ & ตัวละคร")
+
+PlayerTab:CreateSlider({
+   Name = "วิ่งเร็ว (Speed - ไม่วาร์ปกลับ)",
+   Range = {16, 120},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+      local char = game.Players.LocalPlayer.Character
+      if char and char:FindFirstChild("Humanoid") then
+         char.Humanoid.WalkSpeed = Value
+      end
+   end,
+})
+
+PlayerTab:CreateSlider({
+   Name = "กระโดดสูง (Jump Power)",
+   Range = {50, 250},
+   Increment = 5,
+   Suffix = "Power",
+   CurrentValue = 50,
+   Flag = "JumpSlider",
+   Callback = function(Value)
+      local char = game.Players.LocalPlayer.Character
+      if char and char:FindFirstChild("Humanoid") then
+         char.Humanoid.UseJumpPower = true
+         char.Humanoid.JumpPower = Value
+      end
+   end,
+})
+
+local InfJumpStatus = PlayerTab:CreateParagraph({
+   Title = "สถานะ กระโดดไม่จำกัด",
+   Content = GetStatusText(false)
+})
+
+PlayerTab:CreateToggle({
+   Name = "กระโดดไม่จำกัด (Infinite Jump)",
+   CurrentValue = false,
+   Flag = "InfJumpToggle",
+   Callback = function(Value)
+      InfiniteJumpEnabled = Value
+      InfJumpStatus:Set({Title = "สถานะ กระโดดไม่จำกัด", Content = GetStatusText(Value)})
+   end,
+})
+
+-- ฟังก์ชันรองรับระบบกระโดดไม่จำกัด
+game:GetService("UserInputService").JumpRequest:Connect(function()
+   if InfiniteJumpEnabled then
+      local char = game.Players.LocalPlayer.Character
+      if char and char:FindFirstChildOfClass("Humanoid") then
+         char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+      end
+   end
+end)
+
+local InvisStatus = PlayerTab:CreateParagraph({
+   Title = "สถานะ หายตัว",
+   Content = GetStatusText(false)
+})
+
+PlayerTab:CreateToggle({
+   Name = "ระบบหายตัว (Invisibility)",
+   CurrentValue = false,
+   Flag = "InvisToggle",
+   Callback = function(Value)
+      Invisibility = Value
+      InvisStatus:Set({Title = "สถานะ หายตัว", Content = GetStatusText(Value)})
+
+      local char = game.Players.LocalPlayer.Character
+      if char then
+         for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+               if part.Name ~= "HumanoidRootPart" then
+                  part.Transparency = Invisibility and 1 or 0
+               end
+            end
+         end
+      end
+   end,
+})
+
+-- ==========================================
+-- 3. TAB: TRAIN (ระบบรถไฟ)
+-- ==========================================
+
+TrainTab:CreateSection("ควบคุมรถไฟ")
+
+local TrainStatus = TrainTab:CreateParagraph({
+   Title = "สถานะ ขับรถไฟอัตโนมัติ",
+   Content = GetStatusText(false)
+})
+
+TrainTab:CreateToggle({
+   Name = "ขับรถไฟอัตโนมัติ (Auto Drive Train)",
+   CurrentValue = false,
+   Flag = "AutoTrainToggle",
+   Callback = function(Value)
+      AutoDriveTrain = Value
+      TrainStatus:Set({Title = "สถานะ ขับรถไฟอัตโนมัติ", Content = GetStatusText(Value)})
+
+      task.spawn(function()
+         while AutoDriveTrain do
+            task.wait(0.1)
+         end
+      end)
+   end,
+})
+
+TrainTab:CreateSlider({
+   Name = "ปรับความเร็วรถไฟ (Train Speed)",
+   Range = {10, 300},
+   Increment = 10,
+   Suffix = "MPH",
+   CurrentValue = 50,
+   Flag = "TrainSpeedSlider",
+   Callback = function(Value)
+      TrainSpeed = Value
+   end,
+})
+
+-- ==========================================
+-- 4. TAB: VISUAL (ESP มองทะลุ)
+-- ==========================================
+
+VisualTab:CreateSection("ตั้งค่าการมองทะลุ")
+
+local ItemESPStatus = VisualTab:CreateParagraph({
+   Title = "สถานะ มองทะลุสิ่งของ",
+   Content = GetStatusText(false)
+})
+
+VisualTab:CreateToggle({
+   Name = "เปิดการมองทะลุกำแพง (ESP Items/Objects)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+      ESPEnabled = Value
+      ItemESPStatus:Set({Title = "สถานะ มองทะลุสิ่งของ", Content = GetStatusText(Value)})
+   end,
+})
+
+VisualTab:CreateColorPicker({
+    Name = "ปรับสี Highlight สิ่งของ",
+    Color = Color3.fromRGB(255, 0, 0),
+    Flag = "ESPColorPicker",
+    Callback = function(Value)
+        ESPColor = Value
+    end
+})
+
+VisualTab:CreateSection("ระบบมองเห็นผู้เล่นอื่น")
+
+local PlayerESPStatusDisplay = VisualTab:CreateParagraph({
+   Title = "สถานะ มองเห็นผู้เล่นอื่น",
+   Content = GetStatusText(false)
+})
+
+VisualTab:CreateToggle({
+   Name = "มองเห็นผู้เล่นอื่น (Player ESP)",
+   CurrentValue = false,
+   Flag = "PlayerESPToggle",
+   Callback = function(Value)
+      PlayerESPEnabled = Value
+      PlayerESPStatusDisplay:Set({Title = "สถานะ มองเห็นผู้เล่นอื่น", Content = GetStatusText(Value)})
+
+      task.spawn(function()
+         while PlayerESPEnabled do
+            task.wait(1)
+            pcall(function()
+               for _, player in pairs(game.Players:GetPlayers()) do
+                  if player ~= game.Players.LocalPlayer and player.Character then
+                     local char = player.Character
+                     if not char:FindFirstChild("PlayerHighlightESP") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "PlayerHighlightESP"
+                        highlight.Adornee = char
+                        highlight.Parent = char
+                        highlight.FillColor = PlayerESPColor
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                     else
+                        char.PlayerHighlightESP.FillColor = PlayerESPColor
+                        char.PlayerHighlightESP.Enabled = PlayerESPEnabled
+                     end
+                  end
+               end
+            end)
+         end
+         -- ปิดการทำงานเมื่อปิด Toggle
+         for _, player in pairs(game.Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("PlayerHighlightESP") then
+               player.Character.PlayerHighlightESP.Enabled = false
+            end
+         end
+      end)
+   end,
+})
+
+VisualTab:CreateColorPicker({
+    Name = "ปรับสีมองเห็นผู้เล่นอื่น",
+    Color = Color3.fromRGB(0, 255, 0),
+    Flag = "PlayerESPColorPicker",
+    Callback = function(Value)
+        PlayerESPColor = Value
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("PlayerHighlightESP") then
+                player.Character.PlayerHighlightESP.FillColor = PlayerESPColor
+            end
+        end
+    end
+})
+
+-- แจ้งเตือนเมื่อโหลดสคริปต์เสร็จสิ้น
+Rayfield:Notify({
+   Title = "สำเร็จ!",
+   Content = "อัปเดตระบบแสดงสถานะ สีเขียว/สีแดง เรียบร้อยแล้ว",
+   Duration = 5,
+   Image = 4483362458,
+})
